@@ -105,6 +105,68 @@ export function importFromExcel(file) {
   });
 }
 
+export function exportDashboardReport(employees, costCodes, allocations, startDate, endDate) {
+  const wb = XLSX.utils.book_new();
+  const empMap = Object.fromEntries(employees.map(e => [e.id, e]));
+  const ccMap = Object.fromEntries(costCodes.map(c => [c.id, c]));
+
+  // Sheet 1: All allocations in range
+  const allocData = allocations.map(a => {
+    const emp = empMap[a.employeeId];
+    const cc = ccMap[a.costCodeId];
+    return {
+      'Employee Name': emp?.name || 'Unknown',
+      Department: emp?.department || '',
+      'Cost Code': cc?.code || 'Unknown',
+      'Cost Code Name': cc?.name || '',
+      Category: cc?.category || '',
+      Approver: cc?.approver || '',
+      'Allocation %': a.percentage,
+      'Allocation Type': a.allocationType || 'Forecasted',
+      'Start Date': a.startDate,
+      'End Date': a.endDate,
+      'Last Modified By': a.lastModifiedBy || '',
+      'Last Modified At': a.lastModifiedAt || '',
+    };
+  });
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(allocData), 'Allocations');
+
+  // Sheet 2: Employee summary
+  const empSummary = {};
+  allocations.forEach(a => {
+    const emp = empMap[a.employeeId];
+    const key = a.employeeId;
+    if (!empSummary[key]) {
+      empSummary[key] = { 'Employee': emp?.name || 'Unknown', 'Department': emp?.department || '', 'Approved %': 0, 'Forecasted %': 0, 'Total %': 0, 'Cost Codes': new Set() };
+    }
+    const pct = a.percentage;
+    if (a.allocationType === 'Approved') empSummary[key]['Approved %'] += pct;
+    else empSummary[key]['Forecasted %'] += pct;
+    empSummary[key]['Total %'] += pct;
+    const cc = ccMap[a.costCodeId];
+    empSummary[key]['Cost Codes'].add(cc?.code || '');
+  });
+  const empRows = Object.values(empSummary).map(e => ({ ...e, 'Cost Codes': [...e['Cost Codes']].join(', ') }));
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(empRows), 'Employee Summary');
+
+  // Sheet 3: Cost code summary
+  const ccSummary = {};
+  allocations.forEach(a => {
+    const cc = ccMap[a.costCodeId];
+    const key = a.costCodeId;
+    if (!ccSummary[key]) {
+      ccSummary[key] = { 'Cost Code': cc?.code || '', 'Name': cc?.name || '', 'Category': cc?.category || '', 'Approver': cc?.approver || '', 'Employee Count': new Set(), 'Total %': 0 };
+    }
+    ccSummary[key]['Employee Count'].add(a.employeeId);
+    ccSummary[key]['Total %'] += a.percentage;
+  });
+  const ccRows = Object.values(ccSummary).map(c => ({ ...c, 'Employee Count': c['Employee Count'].size }));
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(ccRows), 'Cost Code Summary');
+
+  const filename = `dashboard_report_${startDate}_to_${endDate}.xlsx`;
+  XLSX.writeFile(wb, filename);
+}
+
 export function exportAllocationsReport(employees, costCodes, allocations, filterDate) {
   const wb = XLSX.utils.book_new();
   const empMap = Object.fromEntries(employees.map(e => [e.id, e]));

@@ -23,17 +23,23 @@ export default function Allocations() {
   const [form, setForm] = useState(emptyAlloc);
   const [editId, setEditId] = useState(null);
   const [error, setError] = useState('');
-  const [filterDate, setFilterDate] = useState('');
+  const [filterStartDate, setFilterStartDate] = useState('');
+  const [filterEndDate, setFilterEndDate] = useState('');
   const [filterEmployee, setFilterEmployee] = useState('');
   const [filterCostCode, setFilterCostCode] = useState('');
+  const [filterType, setFilterType] = useState('');
 
   const empMap = useMemo(() => Object.fromEntries(state.employees.map(e => [e.id, e])), [state.employees]);
   const ccMap = useMemo(() => Object.fromEntries(state.costCodes.map(c => [c.id, c])), [state.costCodes]);
 
   const filteredAllocations = useMemo(() => {
     let result = state.allocations;
-    if (filterDate) {
-      result = result.filter(a => a.startDate <= filterDate && a.endDate >= filterDate);
+    if (filterStartDate && filterEndDate) {
+      result = result.filter(a => a.startDate <= filterEndDate && a.endDate >= filterStartDate);
+    } else if (filterStartDate) {
+      result = result.filter(a => a.endDate >= filterStartDate);
+    } else if (filterEndDate) {
+      result = result.filter(a => a.startDate <= filterEndDate);
     }
     if (filterEmployee) {
       result = result.filter(a => a.employeeId === filterEmployee);
@@ -41,8 +47,11 @@ export default function Allocations() {
     if (filterCostCode) {
       result = result.filter(a => a.costCodeId === filterCostCode);
     }
+    if (filterType) {
+      result = result.filter(a => (a.allocationType || 'Forecasted') === filterType);
+    }
     return result;
-  }, [state.allocations, filterDate, filterEmployee, filterCostCode]);
+  }, [state.allocations, filterStartDate, filterEndDate, filterEmployee, filterCostCode, filterType]);
 
   const columns = [
     {
@@ -67,7 +76,7 @@ export default function Allocations() {
       key: 'totalForEmployee',
       label: 'Employee Total',
       render: (row) => {
-        const date = filterDate || row.startDate;
+        const date = filterStartDate || row.startDate;
         const total = getEmployeeTotalAllocation(state.allocations, row.employeeId, date);
         return (
           <span className={total > 100 ? 'text-danger' : total === 100 ? 'text-success' : ''}>
@@ -181,8 +190,12 @@ export default function Allocations() {
 
       <div className="filters-bar">
         <label className="filter-item">
-          <span>Filter by Date</span>
-          <input type="date" value={filterDate} onChange={e => setFilterDate(e.target.value)} />
+          <span>Start Date</span>
+          <input type="date" value={filterStartDate} onChange={e => setFilterStartDate(e.target.value)} />
+        </label>
+        <label className="filter-item">
+          <span>End Date</span>
+          <input type="date" value={filterEndDate} onChange={e => setFilterEndDate(e.target.value)} />
         </label>
         <label className="filter-item">
           <span>Employee</span>
@@ -202,8 +215,16 @@ export default function Allocations() {
             ))}
           </select>
         </label>
-        {(filterDate || filterEmployee || filterCostCode) && (
-          <button className="btn btn-sm" onClick={() => { setFilterDate(''); setFilterEmployee(''); setFilterCostCode(''); }}>
+        <label className="filter-item">
+          <span>Type</span>
+          <select value={filterType} onChange={e => setFilterType(e.target.value)}>
+            <option value="">All Types</option>
+            <option value="Approved">Approved</option>
+            <option value="Forecasted">Forecasted</option>
+          </select>
+        </label>
+        {(filterStartDate || filterEndDate || filterEmployee || filterCostCode || filterType) && (
+          <button className="btn btn-sm" onClick={() => { setFilterStartDate(''); setFilterEndDate(''); setFilterEmployee(''); setFilterCostCode(''); setFilterType(''); }}>
             Clear Filters
           </button>
         )}
