@@ -160,6 +160,31 @@ export default function Dashboard() {
     }));
   }, [employeeSummaries]);
 
+  // 7. Team allocation bar chart
+  const teamBarData = useMemo(() => {
+    const teamMap = {};
+    employeeSummaries.forEach(emp => {
+      const team = emp.team || 'Unassigned';
+      if (!teamMap[team]) teamMap[team] = { team, approved: 0, forecasted: 0, headcount: 0 };
+      teamMap[team].approved += emp.approvedPct;
+      teamMap[team].forecasted += emp.forecastedPct;
+      teamMap[team].headcount += 1;
+    });
+    return Object.values(teamMap)
+      .map(t => ({ ...t, avgAllocation: t.headcount > 0 ? Math.round((t.approved + t.forecasted) / t.headcount) : 0 }))
+      .sort((a, b) => b.avgAllocation - a.avgAllocation);
+  }, [employeeSummaries]);
+
+  // 8. Designation distribution pie
+  const designationPieData = useMemo(() => {
+    const desMap = {};
+    employeeSummaries.filter(e => e.totalPercentage > 0).forEach(emp => {
+      const des = emp.designation || 'Not Specified';
+      desMap[des] = (desMap[des] || 0) + 1;
+    });
+    return Object.entries(desMap).map(([name, value]) => ({ name, value }));
+  }, [employeeSummaries]);
+
   // 5. Approved vs Forecasted donut
   const typeDonutData = useMemo(() => {
     const midAllocs = activeAllocations.filter(a => a.startDate <= midDate && a.endDate >= midDate);
@@ -391,6 +416,36 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Row 4: Team Allocation + Designation Distribution */}
+      <div className="charts-grid">
+        <div className="chart-card">
+          <h3>Allocation by Team (Avg per Employee)</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={teamBarData} margin={{ left: 10, right: 10 }}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="team" fontSize={11} interval={0} angle={-20} textAnchor="end" height={50} />
+              <YAxis tickFormatter={v => `${v}%`} domain={[0, 100]} />
+              <Tooltip formatter={(v, name) => name === 'headcount' ? v : `${v}%`} />
+              <Legend />
+              <Bar dataKey="avgAllocation" name="Avg Allocation %" fill="#1a56db" radius={[3, 3, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div className="chart-card">
+          <h3>Active Employees by Designation</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <PieChart>
+              <Pie data={designationPieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} label={({ name, value }) => `${name}: ${value}`}>
+                {designationPieData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+              </Pie>
+              <Tooltip />
+              <Legend />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
       {/* Detailed Employee Table */}
       <div className="detail-section">
         <h3>Employee Allocation Details — {formatDate(startDate)} to {formatDate(endDate)}</h3>
@@ -399,6 +454,8 @@ export default function Dashboard() {
             <thead>
               <tr>
                 <th>Employee</th>
+                <th>Designation</th>
+                <th>Team</th>
                 <th>Department</th>
                 <th>Cost Code Allocations</th>
                 <th>Approved %</th>
@@ -416,6 +473,8 @@ export default function Dashboard() {
                 return (
                   <tr key={emp.id} className={emp.totalPercentage > 100 ? 'row-danger' : ''}>
                     <td><strong>{emp.name}</strong></td>
+                    <td>{emp.designation || <span className="text-muted">-</span>}</td>
+                    <td>{emp.team || <span className="text-muted">-</span>}</td>
                     <td>{emp.department}</td>
                     <td>
                       <div className="alloc-chips">

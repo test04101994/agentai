@@ -69,6 +69,8 @@ export function buildLoginUsers(employees) {
     role: emp.role?.toLowerCase().includes('admin') ? ROLES.ADMIN : ROLES.MANAGER,
     employeeId: emp.id,
     department: emp.department,
+    designation: emp.designation || '',
+    team: emp.team || '',
     employeeRole: emp.role,
   }));
 

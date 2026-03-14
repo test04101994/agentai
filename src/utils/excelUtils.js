@@ -9,6 +9,8 @@ export function exportToExcel(employees, costCodes, allocations) {
     ID: e.id,
     Name: e.name,
     Email: e.email,
+    Designation: e.designation || '',
+    Team: e.team || '',
     Department: e.department,
     Role: e.role,
   }));
@@ -61,6 +63,8 @@ export function importFromExcel(file) {
             id: r.ID || uuidv4(),
             name: r.Name || '',
             email: r.Email || '',
+            designation: r.Designation || '',
+            team: r.Team || '',
             department: r.Department || '',
             role: r.Role || '',
           }));
@@ -137,7 +141,7 @@ export function exportDashboardReport(employees, costCodes, allocations, startDa
     const emp = empMap[a.employeeId];
     const key = a.employeeId;
     if (!empSummary[key]) {
-      empSummary[key] = { 'Employee': emp?.name || 'Unknown', 'Department': emp?.department || '', 'Approved %': 0, 'Forecasted %': 0, 'Total %': 0, 'Cost Codes': new Set() };
+      empSummary[key] = { 'Employee': emp?.name || 'Unknown', 'Designation': emp?.designation || '', 'Team': emp?.team || '', 'Department': emp?.department || '', 'Approved %': 0, 'Forecasted %': 0, 'Total %': 0, 'Cost Codes': new Set() };
     }
     const pct = a.percentage;
     if (a.allocationType === 'Approved') empSummary[key]['Approved %'] += pct;

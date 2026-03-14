@@ -1,11 +1,11 @@
 export const sampleData = {
   employees: [
-    { id: 'emp-1', name: 'Alice Johnson', email: 'alice@company.com', department: 'Engineering', role: 'Senior Developer' },
-    { id: 'emp-2', name: 'Bob Smith', email: 'bob@company.com', department: 'Engineering', role: 'Developer' },
-    { id: 'emp-3', name: 'Carol Davis', email: 'carol@company.com', department: 'Design', role: 'UI Designer' },
-    { id: 'emp-4', name: 'David Wilson', email: 'david@company.com', department: 'Marketing', role: 'Marketing Lead' },
-    { id: 'emp-5', name: 'Eva Martinez', email: 'eva@company.com', department: 'Engineering', role: 'Tech Lead' },
-    { id: 'emp-6', name: 'Frank Brown', email: 'frank@company.com', department: 'Finance', role: 'Analyst' },
+    { id: 'emp-1', name: 'Alice Johnson', email: 'alice@company.com', department: 'Engineering', role: 'Senior Developer', designation: 'Lead Engineer', team: 'Platform' },
+    { id: 'emp-2', name: 'Bob Smith', email: 'bob@company.com', department: 'Engineering', role: 'Developer', designation: 'Software Engineer', team: 'Platform' },
+    { id: 'emp-3', name: 'Carol Davis', email: 'carol@company.com', department: 'Design', role: 'UI Designer', designation: 'Senior Designer', team: 'Product Design' },
+    { id: 'emp-4', name: 'David Wilson', email: 'david@company.com', department: 'Marketing', role: 'Marketing Lead', designation: 'Director', team: 'Growth' },
+    { id: 'emp-5', name: 'Eva Martinez', email: 'eva@company.com', department: 'Engineering', role: 'Tech Lead', designation: 'Principal Engineer', team: 'Infrastructure' },
+    { id: 'emp-6', name: 'Frank Brown', email: 'frank@company.com', department: 'Finance', role: 'Analyst', designation: 'Senior Analyst', team: 'FP&A' },
   ],
   costCodes: [
     { id: 'cc-1', code: 'PRJ-001', name: 'Project Alpha', description: 'Main product development', category: 'Development', approver: 'Eva Martinez' },

@@ -55,9 +55,14 @@ export default function Login() {
                 <Shield size={14} />
                 <span>Role: <span className={`badge ${selectedUser.role === ROLES.ADMIN ? 'badge-danger' : 'badge-info'}`}>{selectedUser.role}</span></span>
               </div>
-              {selectedUser.department && (
+              {selectedUser.designation && (
                 <div className="login-preview-row">
-                  <span style={{ marginLeft: 18 }}>Dept: {selectedUser.department}</span>
+                  <span style={{ marginLeft: 18 }}>{selectedUser.designation}</span>
+                </div>
+              )}
+              {(selectedUser.team || selectedUser.department) && (
+                <div className="login-preview-row">
+                  <span style={{ marginLeft: 18 }}>{[selectedUser.team, selectedUser.department].filter(Boolean).join(' / ')}</span>
                 </div>
               )}
               <div className="login-role-info">

@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useAppContext } from '../context/AppContext';
+import { useAuth } from '../context/AuthContext';
 import DataTable from '../components/DataTable';
 import Modal from '../components/Modal';
-import { Plus, Edit2, Trash2 } from 'lucide-react';
+import { Plus, Edit2, Trash2, Lock } from 'lucide-react';
 
 const emptyCostCode = { code: '', name: '', description: '', category: '', approver: '' };
 
@@ -10,6 +11,7 @@ const categories = ['Development', 'R&D', 'Operations', 'Marketing', 'Support', 
 
 export default function CostCodes() {
   const { state, dispatch } = useAppContext();
+  const { isAdmin } = useAuth();
   const [modal, setModal] = useState(null);
   const [form, setForm] = useState(emptyCostCode);
   const [editId, setEditId] = useState(null);
@@ -56,22 +58,27 @@ export default function CostCodes() {
   return (
     <div className="page">
       <div className="page-header">
-        <h1>Cost Codes</h1>
-        <button className="btn btn-primary" onClick={openAdd}>
-          <Plus size={16} /> Add Cost Code
-        </button>
+        <div>
+          <h1>Cost Codes</h1>
+          {!isAdmin && <div className="role-notice"><Lock size={13} /> Read-only. Only admins can manage cost codes.</div>}
+        </div>
+        {isAdmin && (
+          <button className="btn btn-primary" onClick={openAdd}>
+            <Plus size={14} /> Add Cost Code
+          </button>
+        )}
       </div>
 
       <DataTable
         columns={columns}
         data={state.costCodes}
         searchPlaceholder="Search cost codes..."
-        actions={(row) => (
+        actions={isAdmin ? (row) => (
           <>
-            <button className="btn-icon" title="Edit" onClick={() => openEdit(row)}><Edit2 size={15} /></button>
-            <button className="btn-icon danger" title="Delete" onClick={() => handleDelete(row.id)}><Trash2 size={15} /></button>
+            <button className="btn-icon" title="Edit" onClick={() => openEdit(row)}><Edit2 size={14} /></button>
+            <button className="btn-icon danger" title="Delete" onClick={() => handleDelete(row.id)}><Trash2 size={14} /></button>
           </>
-        )}
+        ) : undefined}
       />
 
       {modal && (

@@ -4,13 +4,15 @@ import DataTable from '../components/DataTable';
 import Modal from '../components/Modal';
 import StatusBadge from '../components/StatusBadge';
 import { getEmployeeTotalAllocation } from '../utils/validationUtils';
-import { Plus, Edit2, Trash2 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { Plus, Edit2, Trash2, Lock } from 'lucide-react';
 
-const emptyEmployee = { name: '', email: '', department: '', role: '' };
+const emptyEmployee = { name: '', email: '', department: '', role: '', designation: '', team: '' };
 
 export default function Employees() {
   const { state, dispatch } = useAppContext();
-  const [modal, setModal] = useState(null); // null | 'add' | 'edit'
+  const { isAdmin } = useAuth();
+  const [modal, setModal] = useState(null);
   const [form, setForm] = useState(emptyEmployee);
   const [editId, setEditId] = useState(null);
 
@@ -19,6 +21,8 @@ export default function Employees() {
   const columns = [
     { key: 'name', label: 'Name' },
     { key: 'email', label: 'Email' },
+    { key: 'designation', label: 'Designation' },
+    { key: 'team', label: 'Team' },
     { key: 'department', label: 'Department' },
     { key: 'role', label: 'Role' },
     {
@@ -37,7 +41,10 @@ export default function Employees() {
   }
 
   function openEdit(emp) {
-    setForm({ name: emp.name, email: emp.email, department: emp.department, role: emp.role });
+    setForm({
+      name: emp.name, email: emp.email, department: emp.department,
+      role: emp.role, designation: emp.designation || '', team: emp.team || '',
+    });
     setEditId(emp.id);
     setModal('edit');
   }
@@ -61,22 +68,27 @@ export default function Employees() {
   return (
     <div className="page">
       <div className="page-header">
-        <h1>Employees</h1>
-        <button className="btn btn-primary" onClick={openAdd}>
-          <Plus size={16} /> Add Employee
-        </button>
+        <div>
+          <h1>Employees</h1>
+          {!isAdmin && <div className="role-notice"><Lock size={13} /> Read-only. Only admins can manage employees.</div>}
+        </div>
+        {isAdmin && (
+          <button className="btn btn-primary" onClick={openAdd}>
+            <Plus size={14} /> Add Employee
+          </button>
+        )}
       </div>
 
       <DataTable
         columns={columns}
         data={state.employees}
         searchPlaceholder="Search employees..."
-        actions={(row) => (
+        actions={isAdmin ? (row) => (
           <>
-            <button className="btn-icon" title="Edit" onClick={() => openEdit(row)}><Edit2 size={15} /></button>
-            <button className="btn-icon danger" title="Delete" onClick={() => handleDelete(row.id)}><Trash2 size={15} /></button>
+            <button className="btn-icon" title="Edit" onClick={() => openEdit(row)}><Edit2 size={14} /></button>
+            <button className="btn-icon danger" title="Delete" onClick={() => handleDelete(row.id)}><Trash2 size={14} /></button>
           </>
-        )}
+        ) : undefined}
       />
 
       {modal && (
@@ -90,14 +102,26 @@ export default function Employees() {
               Email
               <input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
             </label>
-            <label>
-              Department
-              <input value={form.department} onChange={e => setForm({ ...form, department: e.target.value })} />
-            </label>
-            <label>
-              Role
-              <input value={form.role} onChange={e => setForm({ ...form, role: e.target.value })} />
-            </label>
+            <div className="form-row">
+              <label>
+                Designation
+                <input value={form.designation} onChange={e => setForm({ ...form, designation: e.target.value })} placeholder="e.g. Senior Engineer" />
+              </label>
+              <label>
+                Team
+                <input value={form.team} onChange={e => setForm({ ...form, team: e.target.value })} placeholder="e.g. Platform" />
+              </label>
+            </div>
+            <div className="form-row">
+              <label>
+                Department
+                <input value={form.department} onChange={e => setForm({ ...form, department: e.target.value })} />
+              </label>
+              <label>
+                Role
+                <input value={form.role} onChange={e => setForm({ ...form, role: e.target.value })} />
+              </label>
+            </div>
             <div className="form-actions">
               <button type="button" className="btn" onClick={() => setModal(null)}>Cancel</button>
               <button type="submit" className="btn btn-primary">{modal === 'add' ? 'Add' : 'Save'}</button>
