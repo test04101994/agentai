@@ -132,6 +132,10 @@ export default function Allocations() {
   function handleSubmit(e) {
     e.preventDefault();
     const pct = Number(form.percentage);
+    if (isNaN(pct) || !form.percentage) {
+      setError('Percentage must be a valid number.');
+      return;
+    }
     if (pct <= 0 || pct > 100) {
       setError('Percentage must be between 1 and 100.');
       return;

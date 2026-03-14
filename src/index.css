@@ -665,7 +665,33 @@ body {
 
 .alert-success { background: var(--success-light); color: var(--success); }
 .alert-error { background: var(--danger-light); color: var(--danger); }
+.alert-warning { background: var(--warning-light); color: var(--warning); }
 .alert span { flex: 1; }
+
+/* Import warnings */
+.import-warnings {
+  background: var(--warning-light);
+  border: 1px solid var(--warning);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  font-size: 12px;
+  color: var(--warning);
+}
+.import-warnings h4 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+.import-warnings ul {
+  list-style: disc;
+  padding-left: 20px;
+}
+.import-warnings li {
+  margin-bottom: 2px;
+}
 
 /* ===== Date Picker ===== */
 .date-picker-wrapper {

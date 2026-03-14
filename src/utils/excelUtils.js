@@ -55,50 +55,155 @@ export function importFromExcel(file) {
       try {
         const wb = XLSX.read(e.target.result, { type: 'array' });
         const result = {};
+        const warnings = [];
 
         // Parse Employees
         if (wb.SheetNames.includes('Employees')) {
           const rows = XLSX.utils.sheet_to_json(wb.Sheets['Employees']);
-          result.employees = rows.map(r => ({
-            id: r.ID || uuidv4(),
-            name: r.Name || '',
-            email: r.Email || '',
-            designation: r.Designation || '',
-            team: r.Team || '',
-            department: r.Department || '',
-            role: r.Role || '',
-          }));
+          result.employees = [];
+          rows.forEach((r, i) => {
+            const rowNum = i + 2; // Excel row (1-indexed + header)
+            if (!r.Name || String(r.Name).trim() === '') {
+              warnings.push(`Employees row ${rowNum}: Missing required field "Name" — skipped.`);
+              return;
+            }
+            result.employees.push({
+              id: r.ID || uuidv4(),
+              name: String(r.Name).trim(),
+              email: r.Email ? String(r.Email).trim() : '',
+              designation: r.Designation ? String(r.Designation).trim() : '',
+              team: r.Team ? String(r.Team).trim() : '',
+              department: r.Department ? String(r.Department).trim() : '',
+              role: r.Role ? String(r.Role).trim() : '',
+            });
+          });
         }
 
         // Parse Cost Codes
         if (wb.SheetNames.includes('Cost Codes')) {
           const rows = XLSX.utils.sheet_to_json(wb.Sheets['Cost Codes']);
-          result.costCodes = rows.map(r => ({
-            id: r.ID || uuidv4(),
-            code: r.Code || '',
-            name: r.Name || '',
-            description: r.Description || '',
-            category: r.Category || '',
-            approver: r.Approver || '',
-          }));
+          result.costCodes = [];
+          rows.forEach((r, i) => {
+            const rowNum = i + 2;
+            if (!r.Code || String(r.Code).trim() === '') {
+              warnings.push(`Cost Codes row ${rowNum}: Missing required field "Code" — skipped.`);
+              return;
+            }
+            if (!r.Name || String(r.Name).trim() === '') {
+              warnings.push(`Cost Codes row ${rowNum}: Missing required field "Name" — skipped.`);
+              return;
+            }
+            result.costCodes.push({
+              id: r.ID || uuidv4(),
+              code: String(r.Code).trim(),
+              name: String(r.Name).trim(),
+              description: r.Description ? String(r.Description).trim() : '',
+              category: r.Category ? String(r.Category).trim() : '',
+              approver: r.Approver ? String(r.Approver).trim() : '',
+            });
+          });
         }
 
-        // Parse Allocations
+        // Parse Allocations with validation
         if (wb.SheetNames.includes('Allocations')) {
           const rows = XLSX.utils.sheet_to_json(wb.Sheets['Allocations']);
-          result.allocations = rows.map(r => ({
-            id: r.ID || uuidv4(),
-            employeeId: r['Employee ID'] || '',
-            costCodeId: r['Cost Code ID'] || '',
-            percentage: Number(r['Percentage (%)']) || 0,
-            startDate: r['Start Date'] || '',
-            endDate: r['End Date'] || '',
-            lastModifiedBy: r['Last Modified By'] || '',
-            lastModifiedAt: r['Last Modified At'] || '',
-            allocationType: r['Allocation Type'] || 'Forecasted',
-          }));
+          const validAllocations = [];
+          const skippedRows = [];
+
+          rows.forEach((r, i) => {
+            const rowNum = i + 2;
+            const rawPct = r['Percentage (%)'];
+            const pct = Number(rawPct);
+            const employeeId = r['Employee ID'] || '';
+            const costCodeId = r['Cost Code ID'] || '';
+            const startDate = r['Start Date'] ? String(r['Start Date']).trim() : '';
+            const endDate = r['End Date'] ? String(r['End Date']).trim() : '';
+
+            // Required field validation
+            if (!employeeId) {
+              warnings.push(`Allocations row ${rowNum}: Missing "Employee ID" — skipped.`);
+              skippedRows.push(rowNum);
+              return;
+            }
+            if (!costCodeId) {
+              warnings.push(`Allocations row ${rowNum}: Missing "Cost Code ID" — skipped.`);
+              skippedRows.push(rowNum);
+              return;
+            }
+
+            // Percentage validation
+            if (rawPct === undefined || rawPct === null || rawPct === '') {
+              warnings.push(`Allocations row ${rowNum}: Missing percentage — skipped.`);
+              skippedRows.push(rowNum);
+              return;
+            }
+            if (isNaN(pct)) {
+              warnings.push(`Allocations row ${rowNum}: Non-numeric percentage "${rawPct}" — skipped.`);
+              skippedRows.push(rowNum);
+              return;
+            }
+            if (pct <= 0 || pct > 100) {
+              warnings.push(`Allocations row ${rowNum}: Percentage ${pct}% out of range (must be 1–100) — skipped.`);
+              skippedRows.push(rowNum);
+              return;
+            }
+
+            // Date validation
+            if (!startDate || !endDate) {
+              warnings.push(`Allocations row ${rowNum}: Missing start or end date — skipped.`);
+              skippedRows.push(rowNum);
+              return;
+            }
+            if (startDate > endDate) {
+              warnings.push(`Allocations row ${rowNum}: Start date (${startDate}) is after end date (${endDate}) — skipped.`);
+              skippedRows.push(rowNum);
+              return;
+            }
+
+            validAllocations.push({
+              id: r.ID || uuidv4(),
+              employeeId,
+              costCodeId,
+              percentage: pct,
+              startDate,
+              endDate,
+              lastModifiedBy: r['Last Modified By'] ? String(r['Last Modified By']).trim() : '',
+              lastModifiedAt: r['Last Modified At'] ? String(r['Last Modified At']).trim() : '',
+              allocationType: r['Allocation Type'] ? String(r['Allocation Type']).trim() : 'Forecasted',
+            });
+          });
+
+          // Check 100% cap across overlapping allocations within the imported set
+          const overAllocWarnings = [];
+          const empGroups = {};
+          validAllocations.forEach(a => {
+            if (!empGroups[a.employeeId]) empGroups[a.employeeId] = [];
+            empGroups[a.employeeId].push(a);
+          });
+
+          for (const [empId, allocs] of Object.entries(empGroups)) {
+            // Collect all critical dates
+            const dates = new Set();
+            allocs.forEach(a => { dates.add(a.startDate); dates.add(a.endDate); });
+            for (const date of dates) {
+              const total = allocs
+                .filter(a => a.startDate <= date && a.endDate >= date)
+                .reduce((sum, a) => sum + a.percentage, 0);
+              if (total > 100) {
+                overAllocWarnings.push(`Employee "${empId}" exceeds 100% allocation (${total}%) on ${date}.`);
+                break; // One warning per employee is enough
+              }
+            }
+          }
+
+          if (overAllocWarnings.length > 0) {
+            overAllocWarnings.forEach(w => warnings.push(w));
+          }
+
+          result.allocations = validAllocations;
         }
 
+        result.warnings = warnings;
         resolve(result);
       } catch (err) {
         reject(new Error('Failed to parse Excel file: ' + err.message));

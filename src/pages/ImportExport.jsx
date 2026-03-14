@@ -5,13 +5,15 @@ import { Download, Upload, FileSpreadsheet, AlertTriangle, CheckCircle } from 'l
 
 export default function ImportExport() {
   const { state, dispatch } = useAppContext();
-  const [status, setStatus] = useState(null); // { type: 'success'|'error', message: string }
+  const [status, setStatus] = useState(null); // { type: 'success'|'error'|'warning', message: string }
+  const [importWarnings, setImportWarnings] = useState([]);
   const [reportDate, setReportDate] = useState('');
   const fileRef = useRef();
 
   async function handleImport(e) {
     const file = e.target.files[0];
     if (!file) return;
+    setImportWarnings([]);
     try {
       const data = await importFromExcel(file);
       dispatch({ type: 'IMPORT_DATA', payload: data });
@@ -19,7 +21,13 @@ export default function ImportExport() {
       if (data.employees) counts.push(`${data.employees.length} employees`);
       if (data.costCodes) counts.push(`${data.costCodes.length} cost codes`);
       if (data.allocations) counts.push(`${data.allocations.length} allocations`);
-      setStatus({ type: 'success', message: `Imported: ${counts.join(', ')}` });
+
+      if (data.warnings && data.warnings.length > 0) {
+        setImportWarnings(data.warnings);
+        setStatus({ type: 'warning', message: `Imported with ${data.warnings.length} warning(s): ${counts.join(', ')}` });
+      } else {
+        setStatus({ type: 'success', message: `Imported: ${counts.join(', ')}` });
+      }
     } catch (err) {
       setStatus({ type: 'error', message: err.message });
     }
@@ -43,10 +51,19 @@ export default function ImportExport() {
       </div>
 
       {status && (
-        <div className={`alert ${status.type === 'error' ? 'alert-error' : 'alert-success'}`}>
-          {status.type === 'error' ? <AlertTriangle size={18} /> : <CheckCircle size={18} />}
+        <div className={`alert ${status.type === 'error' ? 'alert-error' : status.type === 'warning' ? 'alert-warning' : 'alert-success'}`}>
+          {status.type === 'error' || status.type === 'warning' ? <AlertTriangle size={18} /> : <CheckCircle size={18} />}
           <span>{status.message}</span>
-          <button className="btn-icon" onClick={() => setStatus(null)}>&times;</button>
+          <button className="btn-icon" onClick={() => { setStatus(null); setImportWarnings([]); }}>&times;</button>
+        </div>
+      )}
+
+      {importWarnings.length > 0 && (
+        <div className="import-warnings">
+          <h4><AlertTriangle size={14} /> Import Warnings</h4>
+          <ul>
+            {importWarnings.map((w, i) => <li key={i}>{w}</li>)}
+          </ul>
         </div>
       )}
 
