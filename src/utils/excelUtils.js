@@ -21,6 +21,7 @@ export function exportToExcel(employees, costCodes, allocations) {
     Name: c.name,
     Description: c.description,
     Category: c.category,
+    Approver: c.approver || '',
   }));
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(ccData), 'Cost Codes');
 
@@ -36,6 +37,9 @@ export function exportToExcel(employees, costCodes, allocations) {
     'Percentage (%)': a.percentage,
     'Start Date': a.startDate,
     'End Date': a.endDate,
+    'Allocation Type': a.allocationType || 'Forecasted',
+    'Last Modified By': a.lastModifiedBy || '',
+    'Last Modified At': a.lastModifiedAt || '',
   }));
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(allocData), 'Allocations');
 
@@ -71,6 +75,7 @@ export function importFromExcel(file) {
             name: r.Name || '',
             description: r.Description || '',
             category: r.Category || '',
+            approver: r.Approver || '',
           }));
         }
 
@@ -84,6 +89,9 @@ export function importFromExcel(file) {
             percentage: Number(r['Percentage (%)']) || 0,
             startDate: r['Start Date'] || '',
             endDate: r['End Date'] || '',
+            lastModifiedBy: r['Last Modified By'] || '',
+            lastModifiedAt: r['Last Modified At'] || '',
+            allocationType: r['Allocation Type'] || 'Forecasted',
           }));
         }
 
@@ -116,8 +124,11 @@ export function exportAllocationsReport(employees, costCodes, allocations, filte
       'Cost Code Name': cc?.name || '',
       Category: cc?.category || '',
       'Allocation %': a.percentage,
+      'Allocation Type': a.allocationType || 'Forecasted',
       'Start Date': a.startDate,
       'End Date': a.endDate,
+      'Last Modified By': a.lastModifiedBy || '',
+      'Last Modified At': a.lastModifiedAt || '',
     };
   });
 

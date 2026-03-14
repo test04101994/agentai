@@ -68,11 +68,21 @@ function reducer(state, action) {
 
     // Allocations
     case 'ADD_ALLOCATION':
-      return { ...state, allocations: [...state.allocations, { id: uuidv4(), ...action.payload }] };
+      return { ...state, allocations: [...state.allocations, {
+        id: uuidv4(),
+        ...action.payload,
+        lastModifiedBy: action.payload.lastModifiedBy || 'Unknown',
+        lastModifiedAt: new Date().toISOString(),
+      }] };
     case 'UPDATE_ALLOCATION':
       return {
         ...state,
-        allocations: state.allocations.map(a => a.id === action.payload.id ? { ...a, ...action.payload } : a),
+        allocations: state.allocations.map(a => a.id === action.payload.id ? {
+          ...a,
+          ...action.payload,
+          lastModifiedBy: action.payload.lastModifiedBy || a.lastModifiedBy || 'Unknown',
+          lastModifiedAt: new Date().toISOString(),
+        } : a),
       };
     case 'DELETE_ALLOCATION':
       return { ...state, allocations: state.allocations.filter(a => a.id !== action.payload) };

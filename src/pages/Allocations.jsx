@@ -1,15 +1,24 @@
 import { useState, useMemo } from 'react';
 import { useAppContext } from '../context/AppContext';
+import { useAuth } from '../context/AuthContext';
 import DataTable from '../components/DataTable';
 import Modal from '../components/Modal';
 import StatusBadge from '../components/StatusBadge';
 import { validateAllocationPercentage, getEmployeeTotalAllocation } from '../utils/validationUtils';
-import { Plus, Edit2, Trash2, AlertTriangle } from 'lucide-react';
+import { Plus, Edit2, Trash2, AlertTriangle, Lock } from 'lucide-react';
 
-const emptyAlloc = { employeeId: '', costCodeId: '', percentage: '', startDate: '', endDate: '' };
+const emptyAlloc = { employeeId: '', costCodeId: '', percentage: '', startDate: '', endDate: '', allocationType: 'Forecasted' };
+
+function formatTimestamp(ts) {
+  if (!ts) return '-';
+  const d = new Date(ts);
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) +
+    ' ' + d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+}
 
 export default function Allocations() {
   const { state, dispatch } = useAppContext();
+  const { user, isAdmin } = useAuth();
   const [modal, setModal] = useState(null);
   const [form, setForm] = useState(emptyAlloc);
   const [editId, setEditId] = useState(null);
@@ -70,6 +79,24 @@ export default function Allocations() {
     },
     { key: 'startDate', label: 'Start Date' },
     { key: 'endDate', label: 'End Date' },
+    {
+      key: 'allocationType',
+      label: 'Type',
+      render: (row) => {
+        const type = row.allocationType || 'Forecasted';
+        return <span className={`badge ${type === 'Approved' ? 'badge-success' : 'badge-warning'}`}>{type}</span>;
+      },
+    },
+    {
+      key: 'lastModifiedBy',
+      label: 'Last Modified By',
+      render: (row) => (
+        <div className="modified-info">
+          <span className="modified-by">{row.lastModifiedBy || '-'}</span>
+          <span className="modified-at">{formatTimestamp(row.lastModifiedAt)}</span>
+        </div>
+      ),
+    },
   ];
 
   function openAdd() {
@@ -79,12 +106,14 @@ export default function Allocations() {
   }
 
   function openEdit(alloc) {
+    if (!isAdmin) return;
     setForm({
       employeeId: alloc.employeeId,
       costCodeId: alloc.costCodeId,
       percentage: alloc.percentage,
       startDate: alloc.startDate,
       endDate: alloc.endDate,
+      allocationType: alloc.allocationType || 'Forecasted',
     });
     setEditId(alloc.id);
     setError('');
@@ -117,15 +146,18 @@ export default function Allocations() {
       return;
     }
 
+    const modifiedBy = user?.displayName || 'Unknown';
+
     if (modal === 'add') {
-      dispatch({ type: 'ADD_ALLOCATION', payload: { ...form, percentage: pct } });
+      dispatch({ type: 'ADD_ALLOCATION', payload: { ...form, percentage: pct, lastModifiedBy: modifiedBy } });
     } else {
-      dispatch({ type: 'UPDATE_ALLOCATION', payload: { id: editId, ...form, percentage: pct } });
+      dispatch({ type: 'UPDATE_ALLOCATION', payload: { id: editId, ...form, percentage: pct, lastModifiedBy: modifiedBy } });
     }
     setModal(null);
   }
 
   function handleDelete(id) {
+    if (!isAdmin) return;
     if (confirm('Delete this allocation?')) {
       dispatch({ type: 'DELETE_ALLOCATION', payload: id });
     }
@@ -134,7 +166,14 @@ export default function Allocations() {
   return (
     <div className="page">
       <div className="page-header">
-        <h1>Allocations</h1>
+        <div>
+          <h1>Allocations</h1>
+          {!isAdmin && (
+            <div className="role-notice">
+              <Lock size={13} /> You can add allocations. Only admins can edit or delete.
+            </div>
+          )}
+        </div>
         <button className="btn btn-primary" onClick={openAdd}>
           <Plus size={16} /> Add Allocation
         </button>
@@ -176,8 +215,14 @@ export default function Allocations() {
         searchPlaceholder="Search allocations..."
         actions={(row) => (
           <>
-            <button className="btn-icon" title="Edit" onClick={() => openEdit(row)}><Edit2 size={15} /></button>
-            <button className="btn-icon danger" title="Delete" onClick={() => handleDelete(row.id)}><Trash2 size={15} /></button>
+            {isAdmin ? (
+              <>
+                <button className="btn-icon" title="Edit" onClick={() => openEdit(row)}><Edit2 size={15} /></button>
+                <button className="btn-icon danger" title="Delete" onClick={() => handleDelete(row.id)}><Trash2 size={15} /></button>
+              </>
+            ) : (
+              <span className="text-muted" title="Admin only"><Lock size={14} /></span>
+            )}
           </>
         )}
       />
@@ -230,6 +275,13 @@ export default function Allocations() {
                 <input type="date" required value={form.endDate} onChange={e => setForm({ ...form, endDate: e.target.value })} />
               </label>
             </div>
+            <label>
+              Allocation Type *
+              <select required value={form.allocationType} onChange={e => setForm({ ...form, allocationType: e.target.value })}>
+                <option value="Forecasted">Forecasted</option>
+                <option value="Approved">Approved</option>
+              </select>
+            </label>
             <div className="form-actions">
               <button type="button" className="btn" onClick={() => setModal(null)}>Cancel</button>
               <button type="submit" className="btn btn-primary">{modal === 'add' ? 'Add' : 'Save'}</button>

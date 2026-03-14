@@ -182,35 +182,49 @@ export default function Dashboard() {
                 <th>Cost Code Allocations</th>
                 <th>Total %</th>
                 <th>Status</th>
+                <th>Last Modified By</th>
               </tr>
             </thead>
             <tbody>
-              {employeeSummaries.map(emp => (
-                <tr key={emp.id} className={emp.totalPercentage > 100 ? 'row-danger' : ''}>
-                  <td><strong>{emp.name}</strong></td>
-                  <td>{emp.department}</td>
-                  <td>
-                    <div className="alloc-chips">
-                      {emp.allocations.length === 0 ? (
-                        <span className="text-muted">No allocations</span>
-                      ) : (
-                        emp.allocations.map((a, i) => (
-                          <span key={i} className="alloc-chip">
-                            {a.costCode?.code || '?'}: {a.percentage}%
-                          </span>
-                        ))
-                      )}
-                    </div>
-                  </td>
-                  <td><StatusBadge percentage={emp.totalPercentage} /></td>
-                  <td>
-                    {emp.totalPercentage === 0 && <span className="text-muted">Unassigned</span>}
-                    {emp.totalPercentage > 0 && emp.totalPercentage < 100 && <span className="text-warning">Partial</span>}
-                    {emp.totalPercentage === 100 && <span className="text-success">Full</span>}
-                    {emp.totalPercentage > 100 && <span className="text-danger">Over-allocated</span>}
-                  </td>
-                </tr>
-              ))}
+              {employeeSummaries.map(emp => {
+                const latestAlloc = emp.allocations.length > 0
+                  ? emp.allocations.reduce((latest, a) => (!latest.lastModifiedAt || (a.lastModifiedAt && a.lastModifiedAt > latest.lastModifiedAt)) ? a : latest, emp.allocations[0])
+                  : null;
+                return (
+                  <tr key={emp.id} className={emp.totalPercentage > 100 ? 'row-danger' : ''}>
+                    <td><strong>{emp.name}</strong></td>
+                    <td>{emp.department}</td>
+                    <td>
+                      <div className="alloc-chips">
+                        {emp.allocations.length === 0 ? (
+                          <span className="text-muted">No allocations</span>
+                        ) : (
+                          emp.allocations.map((a, i) => (
+                            <span key={i} className="alloc-chip">
+                              {a.costCode?.code || '?'}: {a.percentage}%
+                            </span>
+                          ))
+                        )}
+                      </div>
+                    </td>
+                    <td><StatusBadge percentage={emp.totalPercentage} /></td>
+                    <td>
+                      {emp.totalPercentage === 0 && <span className="text-muted">Unassigned</span>}
+                      {emp.totalPercentage > 0 && emp.totalPercentage < 100 && <span className="text-warning">Partial</span>}
+                      {emp.totalPercentage === 100 && <span className="text-success">Full</span>}
+                      {emp.totalPercentage > 100 && <span className="text-danger">Over-allocated</span>}
+                    </td>
+                    <td>
+                      {latestAlloc ? (
+                        <div className="modified-info">
+                          <span className="modified-by">{latestAlloc.lastModifiedBy || '-'}</span>
+                          <span className="modified-at">{latestAlloc.lastModifiedAt ? new Date(latestAlloc.lastModifiedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + ' ' + new Date(latestAlloc.lastModifiedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : ''}</span>
+                        </div>
+                      ) : <span className="text-muted">-</span>}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

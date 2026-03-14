@@ -4,7 +4,7 @@ import DataTable from '../components/DataTable';
 import Modal from '../components/Modal';
 import { Plus, Edit2, Trash2 } from 'lucide-react';
 
-const emptyCostCode = { code: '', name: '', description: '', category: '' };
+const emptyCostCode = { code: '', name: '', description: '', category: '', approver: '' };
 
 const categories = ['Development', 'R&D', 'Operations', 'Marketing', 'Support', 'Admin', 'Other'];
 
@@ -19,6 +19,7 @@ export default function CostCodes() {
     { key: 'name', label: 'Name' },
     { key: 'description', label: 'Description' },
     { key: 'category', label: 'Category', render: (row) => <span className="badge badge-neutral">{row.category}</span> },
+    { key: 'approver', label: 'Approver', render: (row) => row.approver || <span className="text-muted">-</span> },
     {
       key: 'employees',
       label: 'Employees Assigned',
@@ -31,7 +32,7 @@ export default function CostCodes() {
 
   function openAdd() { setForm(emptyCostCode); setModal('add'); }
   function openEdit(cc) {
-    setForm({ code: cc.code, name: cc.name, description: cc.description, category: cc.category });
+    setForm({ code: cc.code, name: cc.name, description: cc.description, category: cc.category, approver: cc.approver || '' });
     setEditId(cc.id);
     setModal('edit');
   }
@@ -93,6 +94,15 @@ export default function CostCodes() {
               <select value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}>
                 <option value="">Select...</option>
                 {categories.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </label>
+            <label>
+              Approver
+              <select value={form.approver} onChange={e => setForm({ ...form, approver: e.target.value })}>
+                <option value="">Select approver...</option>
+                {state.employees.map(emp => (
+                  <option key={emp.id} value={emp.name}>{emp.name}</option>
+                ))}
               </select>
             </label>
             <div className="form-actions">

@@ -1,6 +1,8 @@
-import { NavLink, Outlet } from 'react-router-dom';
-import { LayoutDashboard, Users, Hash, GitBranch, FileSpreadsheet, Menu, X } from 'lucide-react';
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { LayoutDashboard, Users, Hash, GitBranch, FileSpreadsheet, Menu, X, LogOut, Sun, Moon, Shield } from 'lucide-react';
 import { useState } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 
 const navItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
@@ -12,6 +14,14 @@ const navItems = [
 
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { user, logout, isAdmin } = useAuth();
+  const { theme, toggleTheme } = useTheme();
+  const navigate = useNavigate();
+
+  function handleLogout() {
+    logout();
+    navigate('/login');
+  }
 
   return (
     <div className="app-layout">
@@ -37,6 +47,26 @@ export default function Layout() {
             </NavLink>
           ))}
         </nav>
+        <div className="sidebar-footer">
+          <button className="theme-toggle" onClick={toggleTheme} title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}>
+            {theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}
+            <span>{theme === 'light' ? 'Dark Mode' : 'Light Mode'}</span>
+          </button>
+          {user && (
+            <div className="sidebar-user">
+              <div className="user-info">
+                <div className="user-name">{user.displayName}</div>
+                <div className="user-role">
+                  <Shield size={12} />
+                  <span className={`badge badge-sm ${isAdmin ? 'badge-danger' : 'badge-info'}`}>{user.role}</span>
+                </div>
+              </div>
+              <button className="btn-icon" onClick={handleLogout} title="Logout">
+                <LogOut size={16} />
+              </button>
+            </div>
+          )}
+        </div>
       </aside>
       <main className="main-content">
         <Outlet />
